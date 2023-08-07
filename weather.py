@@ -1,6 +1,10 @@
 from requests_html import HTMLSession
 from geopy.geocoders import Nominatim
 import subprocess
+import urllib3
+import json
+
+session = HTMLSession()
 
 def get_weather(date: str = "today", location: str = "", unit: str = "c") -> str:
     """gets tempreature of given location (at given) in the provided unit
@@ -13,10 +17,10 @@ def get_weather(date: str = "today", location: str = "", unit: str = "c") -> str
     Returns:
         str: _description_
     """
-    session = HTMLSession()
 
     location = get_loc(location)
-    print(location)
+    print(f"Looking for weather at {location}")
+
     url = f"https://weather.com/weather/today/l/{location}"
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
@@ -45,7 +49,8 @@ def get_loc(location: str = "") -> str:
         str: location in a form of "lat,long"
     """
     if location == "":
-        loc = subprocess.run(["curl", "ipinfo.io/loc"], stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
+        # loc = subprocess.run(["curl", "ipinfo.io/loc"], stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
+        loc = session.get('http://ipinfo.io/json').json()['loc']
         return loc
     
     geolocator = Nominatim(user_agent="MyApp")
