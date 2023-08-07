@@ -1,21 +1,21 @@
-from requests_html import HTMLSession
+from requests_html import HTMLSession, HTMLResponse
 from geopy.geocoders import Nominatim
-import subprocess
-import urllib3
-import json
 
 session = HTMLSession()
 
-def get_weather(date: str = "today", location: str = "", unit: str = "c") -> str:
+def get_weather(
+    date: str = "today", location: str = "", unit: str = "c", verbose: bool = False
+) -> str:
     """gets tempreature of given location (at given) in the provided unit
 
     Args:
-        date (str, optional): date provided in mm/dd/yyyy. Defaults to "today".
-        location (str, optional): location such as "New York". Defaults to "".
-        unit (str, optional): celcius or farenheit. Defaults to "c".
+        date (str, optional): date range of the weather. Defaults to "today".
+        location (str, optional): location ex) "New York". Defaults to "".
+        unit (str, optional): unit either Celcius(c) or Farenheit(f). Defaults to "c".
+        verbose (bool, optional): whether to get extra info (High / Low, Wind, Humidity, Dew Point, Pressure, UV Index, Visibility, Moon Phase) or not. Defaults to False.
 
     Returns:
-        str: _description_
+        str: formatted string of the required data
     """
 
     location = get_loc(location)
@@ -35,9 +35,41 @@ def get_weather(date: str = "today", location: str = "", unit: str = "c") -> str
         headers=headers,
         params=params,
     )
-    
-    temperature = results.html.find("span.CurrentConditions--tempValue--MHmYY", first=True).text
-    return temperature
+
+    temperature = results.html.find(
+        "span.CurrentConditions--tempValue--MHmYY", first=True
+    ).text
+    feel_like_tempreature = results.html.find(
+        "span.TodayDetailsCard--feelsLikeTempValue--2icPt", first=True
+    ).text
+    # other = results.html.find("div.TodayDetailsCard--detailsContainer--2yLtL", first=True).find("div")
+    # for ot in other:
+    #     print(ot.find("div"))
+    if verbose:
+        other_data = get_other_data(results)
+        return f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}\nOther Data: {other_data}"
+    else:
+        return f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}"
+
+
+def get_other_data(results: HTMLResponse) -> dict:
+    """get extra data if verbose flag is used
+
+    Args:
+        results (HTMLResponse): the HTMLSession
+
+    Returns:
+        dict: dictionary of the extra data
+    """
+    other_data = {}
+    other_data_names = results.html.find("div.WeatherDetailsListItem--label--2ZacS")
+    other_data_values = results.html.find("div.WeatherDetailsListItem--wxData--kK35q")
+
+    for data in zip(other_data_names, other_data_values):
+        other_data[data[0].text] = data[1].text
+
+    return other_data
+
 
 def get_loc(location: str = "") -> str:
     """Get user's current location using curl if a location is not defined
@@ -50,9 +82,9 @@ def get_loc(location: str = "") -> str:
     """
     if location == "":
         # loc = subprocess.run(["curl", "ipinfo.io/loc"], stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
-        loc = session.get('http://ipinfo.io/json').json()['loc']
+        loc = session.get("http://ipinfo.io/json").json()["loc"]
         return loc
-    
+
     geolocator = Nominatim(user_agent="MyApp")
     loc = geolocator.geocode(location)
     return f"{loc.latitude},{loc.longitude}"
