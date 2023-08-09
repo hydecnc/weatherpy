@@ -1,32 +1,23 @@
-from requests_html import HTMLSession, HTMLResponse
+from requests_html import HTMLSession
 from geopy.geocoders import Nominatim
-
+from rich.table import Table
 
 class Weather:
     def __init__(self, location: str = "", unit: str = "c") -> None:
         self.session = HTMLSession()
-        
+
         self.location = self.get_loc(location)
         print(f"Looking for weather at {self.location}")
 
-        url = f"https://weather.com/weather/today/l/{self.location}"
-        headers = {
+        self.headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
             "Accept-Langauge": "en-US,en;q=0.9",
         }
-        params = {
+        self.params = {
             "unit": "m" if unit == "c" else "e",
         }
 
-        self.results = self.session.get(
-            url,
-            headers=headers,
-            params=params,
-        )
-
-    def get_weather(
-        self, date: str = "today", verbose: bool = False
-    ) -> str:
+    def get_weather(self, date: str = "today", verbose: bool = False) -> str | Table:
         """gets tempreature of given location (at given) in the provided unit
 
         Args:
@@ -36,20 +27,68 @@ class Weather:
         Returns:
             str: formatted string of the required data
         """
+        if date == "today":
+            return self.get_today_weather(verbose)
+        else:
+            return self.get_montly_weather()
+    
+    def get_today_weather(self, verbose: bool) -> str:
+        """get today's weather
 
+        Args:
+            verbose (bool): verbose flag, if enabled gets extra information
+
+        Returns:
+            str: formatted string including all the data obtained
+        """
+        self.url = f"https://weather.com/weather/today/l/{self.location}"
+        self.results = self.session.get(
+            self.url,
+            headers=self.headers,
+            params=self.params,
+        )
         temperature = self.results.html.find(
             "span.CurrentConditions--tempValue--MHmYY", first=True
         ).text
         feel_like_tempreature = self.results.html.find(
             "span.TodayDetailsCard--feelsLikeTempValue--2icPt", first=True
         ).text
-
         if verbose:
             other_data = self.get_extra_data()
-            return f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}\nOther Data: {other_data}"
+            result =  f"[bold red]Temperature :thermometer:[/bold red] {temperature}\n[bold red]Feels Like :thinking_face:[/bold red] {feel_like_tempreature}\n"
+            for key, val in other_data.items():
+                result += f"[bold red]{key}[/bold red]: {val}\n"
+            return result
         else:
-            return f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}"
+            return (
+                f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}"
+            )
 
+    def get_montly_weather(self) -> Table:
+        self.url = f"https://weather.com/weather/monthly/l/{self.location}"
+        self.results = self.session.get(
+            self.url,
+            headers=self.headers,
+            params=self.params,
+        )
+        dates = self.results.html.find("span.CalendarDateCell--date--JO3Db")
+        temperatures = self.results.html.find(
+            "div.CalendarDateCell--temps--16oU1",
+        )
+
+        montly_data = {}
+        for weekly_data in zip(dates, temperatures):
+            montly_data[weekly_data[0].text] = weekly_data[1].text.replace("\n", "/")
+
+        montly_data = list(zip(montly_data.keys(), montly_data.values()))
+        table = Table("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", show_lines=True, header_style="b red")
+        for i in range(5):
+            weekly_data = []
+            for data in montly_data[i * 7 : (i + 1) * 7]:
+                weekly_data.append(f"[bold green]{data[0]}[/bold green]: {data[1]}")
+            table.add_row(*weekly_data)
+            
+        return table
 
     def get_extra_data(self) -> dict:
         """get extra data if verbose flag is used
@@ -58,8 +97,12 @@ class Weather:
             dict: dictionary containg the extra data
         """
         extra_data = {}
-        extra_data_names = self.results.html.find("div.WeatherDetailsListItem--label--2ZacS")
-        extra_data_values = self.results.html.find("div.WeatherDetailsListItem--wxData--kK35q")
+        extra_data_names = self.results.html.find(
+            "div.WeatherDetailsListItem--label--2ZacS"
+        )
+        extra_data_values = self.results.html.find(
+            "div.WeatherDetailsListItem--wxData--kK35q"
+        )
 
         for data in zip(extra_data_names, extra_data_values):
             if data[0].text == "Wind" or data[0].text == "Pressure":
@@ -69,7 +112,6 @@ class Weather:
             extra_data[data[0].text] = data[1].text
 
         return extra_data
-
 
     def get_loc(self, location: str = "") -> str:
         """Get user's current location using curl if a location is not defined

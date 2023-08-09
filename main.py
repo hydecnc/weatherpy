@@ -1,10 +1,20 @@
 import typer
 from typing_extensions import Annotated
 from weather import Weather
+from rich.console import Console
+from urllib import request
 
 
 app = typer.Typer()
+console = Console()
 
+    
+def internet_on():
+    try:
+        request.urlopen("https://www.google.com", timeout=1)
+        return True
+    except request.URLError as err:
+        return False
 
 @app.command()
 def main(
@@ -18,8 +28,12 @@ def main(
     
     Defaults to today's weather in user location in celcius. 
     """
+    if not internet_on():
+        console.print(":warning: [bold red]No interent connection. Aborting.[/bold red]")
+        return
     weather = Weather(location=location, unit=unit)
-    print(f"{weather.get_weather(date=date, verbose=verbose)}")
+    data = weather.get_weather(date=date, verbose=verbose)
+    console.print(data)
 
 
 if __name__ == "__main__":
