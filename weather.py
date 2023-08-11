@@ -2,6 +2,7 @@ from requests_html import HTMLSession
 from geopy.geocoders import Nominatim
 from rich.table import Table
 
+
 class Weather:
     def __init__(self, location: str = "", unit: str = "c") -> None:
         self.session = HTMLSession()
@@ -17,7 +18,9 @@ class Weather:
             "unit": "m" if unit == "c" else "e",
         }
 
-    def get_weather(self, date: str = "today", verbose: bool = False) -> str | Table:
+    def get_weather(
+        self, date: str = "today", month: bool = False, verbose: bool = False
+    ) -> str | Table:
         """gets tempreature of given location (at given) in the provided unit
 
         Args:
@@ -27,11 +30,11 @@ class Weather:
         Returns:
             str: formatted string of the required data
         """
-        if date == "today":
+        if date == "today" and not month:
             return self.get_today_weather(verbose)
         else:
-            return self.get_montly_weather()
-    
+            return self.get_multiple_weathers(month, date)
+
     def get_today_weather(self, verbose: bool) -> str:
         """get today's weather
 
@@ -55,16 +58,14 @@ class Weather:
         ).text
         if verbose:
             other_data = self.get_extra_data()
-            result =  f"[bold red]Temperature :thermometer:[/bold red] {temperature}\n[bold red]Feels Like :thinking_face:[/bold red] {feel_like_tempreature}\n"
+            result = f"[bold red]Temperature :thermometer:[/bold red] {temperature}\n[bold red]Feels Like :thinking_face:[/bold red] {feel_like_tempreature}\n"
             for key, val in other_data.items():
                 result += f"[bold red]{key}[/bold red]: {val}\n"
             return result
         else:
-            return (
-                f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}"
-            )
+            return f"Temperature: {temperature}\nFeels Like: {feel_like_tempreature}"
 
-    def get_montly_weather(self) -> Table:
+    def get_multiple_weathers(self, month: bool, date: str) -> Table | str:
         self.url = f"https://weather.com/weather/monthly/l/{self.location}"
         self.results = self.session.get(
             self.url,
@@ -80,15 +81,33 @@ class Weather:
         for weekly_data in zip(dates, temperatures):
             montly_data[weekly_data[0].text] = weekly_data[1].text.replace("\n", "/")
 
-        montly_data = list(zip(montly_data.keys(), montly_data.values()))
-        table = Table("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", show_lines=True, header_style="b red")
-        for i in range(5):
-            weekly_data = []
-            for data in montly_data[i * 7 : (i + 1) * 7]:
-                weekly_data.append(f"[bold green]{data[0]}[/bold green]: {data[1]}")
-            table.add_row(*weekly_data)
-            
-        return table
+        if month:
+            montly_data = list(zip(montly_data.keys(), montly_data.values()))
+            table = Table(
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+                show_lines=True,
+                header_style="b red",
+            )
+            for i in range(5):
+                weekly_data = []
+                for data in montly_data[i * 7 : (i + 1) * 7]:
+                    weekly_data.append(f"[bold green]{data[0]}[/bold green]: {data[1]}")
+                table.add_row(*weekly_data)
+            return table
+        else:
+            final_data = ""
+            date_range = list(map(int, date.split("-")))
+
+            for key, val in montly_data.items():
+                if int(key) >= date_range[0] and int(key) <= date_range[1]:
+                    final_data += f"[bold green]{key}[/bold green]: {val}\n"
+            return final_data
 
     def get_extra_data(self) -> dict:
         """get extra data if verbose flag is used
