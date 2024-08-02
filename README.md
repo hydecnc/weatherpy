@@ -1,5 +1,6 @@
 # weatherpy
 Weather command line utility written in python
+
 ![](./demo.mp4)
 
 
