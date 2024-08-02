@@ -28,7 +28,12 @@ dependencies = [
   "typer",
   "lxml",
   "geopy",
+  "requests",
+  "cssselect"
 ]
+
+[project.scripts]
+weatherpy = "weatherpy.main:app"
 
 [project.urls]
 Documentation = "https://github.com/unknown/weatherpy#readme"

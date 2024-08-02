@@ -1,5 +1,7 @@
 # weatherpy
 Weather command line utility written in python
+![](./demo.mp4)
+
 
 ```
 Usage: main.py [OPTIONS]

@@ -1,7 +1,7 @@
 import typer
 from typing_extensions import Annotated
 from typing import Optional
-from weather import Weather
+from weatherpy.weather import Weather
 from rich.console import Console
 from urllib import request
 

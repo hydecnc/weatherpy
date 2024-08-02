@@ -5,6 +5,7 @@ import lxml.html
 import lxml.cssselect
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+
 class Weather:
     def __init__(self, location: str = "", unit: str = "c") -> None:
         self.location = self.get_loc(location)
@@ -40,7 +41,9 @@ class Weather:
             TextColumn("[progress.description]{task.description}"),
             transient=True,
         ) as progress:
-            progress.add_task(description=f"Looking for weather at {self.location}...", total=None)
+            progress.add_task(
+                description=f"Looking for weather at {self.location}...", total=None
+            )
             results = requests.get(url, headers=self.headers, params=self.params)
 
         if results.status_code != 200:
@@ -142,13 +145,15 @@ class Weather:
                 table.add_row(*weekly_data)
             return table
 
-        # print temperatures of date range    
+        # print temperatures of date range
         final_data = ""
         date_range = list(map(int, date.split("-")))
 
         for key, val in montly_data.items():
             if int(key) >= date_range[0] and int(key) <= date_range[1]:
-                final_data += f"[bold green]{key}[/bold green]: {val}\n                 "
+                final_data += (
+                    f"[bold green]{key}[/bold green]: {val}\n                 "
+                )
         return final_data
 
     def get_extra_data(self, tree: lxml.html.HtmlElement) -> dict:
@@ -171,7 +176,9 @@ class Weather:
 
         for data in zip(extra_data_names, extra_data_values):
             if data[0] == "Wind":
-                wanted_value = data[1].replace("\xa0", " ").replace("Wind Direction", "")
+                wanted_value = (
+                    data[1].replace("\xa0", " ").replace("Wind Direction", "")
+                )
                 extra_data[data[0]] = wanted_value
                 continue
             if data[0] == "Pressure":
