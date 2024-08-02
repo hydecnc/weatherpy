@@ -1,8 +1,7 @@
 # weatherpy
 Weather command line utility written in python
 
-![](./demo.mp4)
-
+https://github.com/user-attachments/assets/f8caa368-c468-46a6-a0e7-0f4a3e99a56b
 
 ```
 Usage: main.py [OPTIONS]
